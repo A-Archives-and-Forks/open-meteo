@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Foundation
 import Logging
 import NIOCore
 
@@ -35,9 +36,12 @@ public struct StripeMeterSession {
     /// Key is dictionary is used as customer id
     func submit(events: [String: (calls: Int32, weight: Float)]) async throws {
         /// Batch by 50 because we send 2 events at once
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp: String = formatter.string(from: Date())
         for chunk in events.evenlyChunked(in: 50) {
             let eventsJson = chunk.map {
-                "{\"event_name\":\"api_calls\",\"payload\":{\"stripe_customer_id\":\"\($0.key)\",\"value\":\"\(Int($0.value.weight))\"}},{\"event_name\":\"http_requests\",\"payload\":{\"stripe_customer_id\":\"\($0.key)\",\"value\":\"\(Int($0.value.calls))\"}}"
+                "{\"event_name\":\"api_calls\",\"timestamp\":\"\(timestamp)\",\"payload\":{\"stripe_customer_id\":\"\($0.key)\",\"value\":\"\(Int($0.value.weight))\"}},{\"event_name\":\"http_requests\",\"timestamp\":\"\(timestamp)\",\"payload\":{\"stripe_customer_id\":\"\($0.key)\",\"value\":\"\(Int($0.value.calls))\"}}"
             }.joined(separator: ",")
             let json = "{\"events\":[\(eventsJson)]}"
 
